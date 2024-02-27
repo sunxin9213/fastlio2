@@ -107,7 +107,7 @@ class esekf{
 
 	typedef esekf self;
 	enum{
-		n = state::DOF, m = state::DIM, l = measurement::DOF//sx:n = 24, m = 24, l = 24，猜测是对的
+		n = state::DOF, m = state::DIM, l = measurement::DOF
 	};
 
 public:
@@ -118,7 +118,7 @@ public:
 	typedef SparseMatrix<scalar_type> spMt;
 	typedef Matrix<scalar_type, n, 1> vectorized_state;
 	typedef Matrix<scalar_type, m, 1> flatted_state;//sx:就将scalar_type理解成float或double吧，
-	typedef flatted_state processModel(state &, const input &);//模板函数，参数是x和u（噪声应该是一个参数），返回一个24*1的矩阵
+	typedef flatted_state processModel(state &, const input &);//typedef给函数取别名，参数是x和u（噪声应该是一个参数），返回一个24*1的矩阵
 	typedef Eigen::Matrix<scalar_type, m, n> processMatrix1(state &, const input &);
 	typedef Eigen::Matrix<scalar_type, m, process_noise_dof> processMatrix2(state &, const input &);//processMatrix2是一个函数
 	typedef Eigen::Matrix<scalar_type, process_noise_dof, process_noise_dof> processnoisecovariance;
@@ -1982,7 +1982,7 @@ private:
 	measurementMatrix2_dyn *h_v_dyn;
 
 	measurementModel_share *h_share;
-	measurementModel_dyn_share *h_dyn_share;
+	measurementModel_dyn_share *h_dyn_share;//观测模型
 
 	int maximum_iter = 0;
 	scalar_type limit[n];

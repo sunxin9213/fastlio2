@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "*.tcc": "cpp",
+        "bitset": "cpp",
+        "functional": "cpp",
+        "random": "cpp",
+        "fstream": "cpp",
+        "istream": "cpp",
+        "ostream": "cpp",
+        "streambuf": "cpp",
+        "any": "cpp",
+        "optional": "cpp",
+        "sstream": "cpp",
+        "condition_variable": "cpp",
+        "*.txx": "cpp",
+        "deque": "cpp",
+        "list": "cpp"
+    }
+}

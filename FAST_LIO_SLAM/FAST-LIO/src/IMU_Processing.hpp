@@ -215,7 +215,7 @@ void ImuProcess::UndistortPcl(const MeasureGroup &meas, esekfom::esekf<state_ikf
 {
   /*** add the imu of the last frame-tail to the of current frame-head ***/
   auto v_imu = meas.imu;//sx:imu队列
-  v_imu.push_front(last_imu_);
+  v_imu.push_front(last_imu_);//把上一次的imu最后一个数据加到头处
   const double &imu_beg_time = v_imu.front()->header.stamp.toSec();
   const double &imu_end_time = v_imu.back()->header.stamp.toSec();
   const double &pcl_beg_time = meas.lidar_beg_time;
@@ -245,7 +245,7 @@ void ImuProcess::UndistortPcl(const MeasureGroup &meas, esekfom::esekf<state_ikf
   for (auto it_imu = v_imu.begin(); it_imu < (v_imu.end() - 1); it_imu++)
   {
     auto &&head = *(it_imu);
-    auto &&tail = *(it_imu + 1);
+    auto &&tail = *(it_imu + 1);//sx:前后两帧imu数据
     
     if (tail->header.stamp.toSec() < last_lidar_end_time_)    continue;//时光倒流，不可能
     
@@ -259,7 +259,7 @@ void ImuProcess::UndistortPcl(const MeasureGroup &meas, esekfom::esekf<state_ikf
 
     // fout_imu << setw(10) << head->header.stamp.toSec() - first_lidar_time << " " << angvel_avr.transpose() << " " << acc_avr.transpose() << endl;
 
-    acc_avr     = acc_avr * G_m_s2 / mean_acc.norm(); // - state_inout.ba;sx:????,加速度归一化
+    acc_avr     = acc_avr * G_m_s2 / mean_acc.norm(); // - state_inout.ba;sx:????,都是用初始化的mean值不合理吧
 
     if(head->header.stamp.toSec() < last_lidar_end_time_)
     {
@@ -268,7 +268,7 @@ void ImuProcess::UndistortPcl(const MeasureGroup &meas, esekfom::esekf<state_ikf
     }
     else
     {
-      dt = tail->header.stamp.toSec() - head->header.stamp.toSec();
+      dt = tail->header.stamp.toSec() - head->header.stamp.toSec();//sx:不应该发生这种情况吧
     }
     
     // 原始测量的中值
@@ -368,7 +368,7 @@ void ImuProcess::Process(const MeasureGroup &meas,  esekfom::esekf<state_ikfom, 
     last_imu_   = meas.imu.back();
 
     state_ikfom imu_state = kf_state.get_x();
-    if (init_iter_num > MAX_INI_COUNT)//sx：imu的初始化要进行20次
+    if (init_iter_num > MAX_INI_COUNT)//
     {
       cov_acc *= pow(G_m_s2 / mean_acc.norm(), 2);
       imu_need_init_ = false;

@@ -127,8 +127,9 @@ M3D Lidar_R_wrt_IMU(Eye3d);
 /*** EKF inputs and output ***/
 MeasureGroup Measures;
 esekfom::esekf<state_ikfom, 12, input_ikfom> kf;//实例化类模板
+//参数：状态量、噪声量位数、imu测量量（控制量）
 //这里使用了类模板，state_ikfom是一个结构体类型，有一系列的成员变量，input_ikfm类似
-state_ikfom state_point;//sx:对应于x
+state_ikfom state_point;//sx:对应于x，状态量
 vect3 pos_lid;
 
 nav_msgs::Path path;//包含了一系列位姿
@@ -725,7 +726,7 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
     double solve_start_  = omp_get_wtime();
 
     /*** Computation of Measuremnt Jacobian matrix H and measurents vector ***/
-    ekfom_data.h_x = MatrixXd::Zero(effct_feat_num, 12); //23
+    ekfom_data.h_x = MatrixXd::Zero(effct_feat_num, 12); //23，观测矩阵H
     ekfom_data.h.resize(effct_feat_num);
 
     //求观测值与误差的雅克比矩阵，如论文式14以及式12、13
@@ -817,7 +818,7 @@ int main(int argc, char** argv)
     p_imu->set_gyr_bias_cov(V3D(b_gyr_cov, b_gyr_cov, b_gyr_cov));
     p_imu->set_acc_bias_cov(V3D(b_acc_cov, b_acc_cov, b_acc_cov));
 
-    double epsi[23] = {0.001};
+    double epsi[23] = {0.001};//sx:状态量6*3+外参量2*3
     fill(epsi, epsi+23, 0.001);//memset按照字节填充，fill按照单元赋值，字节已经处理好了
     // 将函数地址传入kf对象中
     kf.init_dyn_share(get_f, df_dx, df_dw, h_share_model, NUM_MAX_ITERATIONS, epsi);
@@ -892,11 +893,12 @@ int main(int argc, char** argv)
             svd_time   = 0;
             t0 = omp_get_wtime();
 
-            p_imu->Process(Measures, kf, feats_undistort);//measures是imu的数据
+            p_imu->Process(Measures, kf, feats_undistort);//measures是imu的数据，前向传播,
+            //include/IKFoM_toolkit/esekfom/esekfom.hpp中的predict()函数还没看
             // 获取kf预测的全局状态（imu）
             state_point = kf.get_x();
-            pos_lid = state_point.pos + state_point.rot * state_point.offset_T_L_I;//后面的变量是一个位置
-
+            pos_lid = state_point.pos + state_point.rot * state_point.offset_T_L_I;//后面的变量是一个位置，雷达的全局坐标
+            //feats_undistort是去完畸变的雷达点云
             if (feats_undistort->empty() || (feats_undistort == NULL))
             {
                 first_lidar_time = Measures.lidar_beg_time;
@@ -946,7 +948,6 @@ int main(int argc, char** argv)
             feats_down_world->resize(feats_down_size);
 
             // 外参，旋转矩阵转欧拉角
-            //sx:后端优化
             V3D ext_euler = SO3ToEuler(state_point.offset_R_L_I);
             fout_pre<<setw(20)<<Measures.lidar_beg_time - first_lidar_time<<" "<<euler_cur.transpose()<<" "<< state_point.pos.transpose()<<" "<<ext_euler.transpose() << " "<<state_point.offset_T_L_I.transpose()<< " " << state_point.vel.transpose() \
             <<" "<<state_point.bg.transpose()<<" "<<state_point.ba.transpose()<<" "<<state_point.grav<< endl;
