@@ -78,14 +78,14 @@ struct share_datastruct
 //applied for measurement as an Eigen matrix whose dimension is changing
 template<typename T>
 struct dyn_share_datastruct
-{
+{///观测矩阵相关的变量
 	bool valid;
 	bool converge;
 	Eigen::Matrix<T, Eigen::Dynamic, 1> z;
-	Eigen::Matrix<T, Eigen::Dynamic, 1> h;
+	Eigen::Matrix<T, Eigen::Dynamic, 1> h;///记录每个激光点到平面的距离，其实就是残差
 	Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> h_v;
-	Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> h_x;
-	Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> R;
+	Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> h_x;///这里应该是每个点的残差对状态量的求导，imu的外参的R和t，imu到激光雷达的外参的R和t
+	Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> R;///noise矩阵
 };
 
 //used for iterated error state EKF update
@@ -107,7 +107,7 @@ class esekf{
 
 	typedef esekf self;
 	enum{
-		n = state::DOF, m = state::DIM, l = measurement::DOF
+		n = state::DOF, m = state::DIM, l = measurement::DOF///n = 23， m = 24， l = 23
 	};
 
 public:
@@ -118,8 +118,8 @@ public:
 	typedef SparseMatrix<scalar_type> spMt;
 	typedef Matrix<scalar_type, n, 1> vectorized_state;
 	typedef Matrix<scalar_type, m, 1> flatted_state;//sx:就将scalar_type理解成float或double吧，
-	typedef flatted_state processModel(state &, const input &);//typedef给函数取别名，参数是x和u（噪声应该是一个参数），返回一个24*1的矩阵
-	typedef Eigen::Matrix<scalar_type, m, n> processMatrix1(state &, const input &);
+	typedef flatted_state processModel(state &, const input &);//typedef给函数取别名，processModel表示这样的一个函数：参数是x和u（噪声应该是一个参数），返回一个24*1的矩阵
+	typedef Eigen::Matrix<scalar_type, m, n> processMatrix1(state &, const input &);///同上
 	typedef Eigen::Matrix<scalar_type, m, process_noise_dof> processMatrix2(state &, const input &);//processMatrix2是一个函数
 	typedef Eigen::Matrix<scalar_type, process_noise_dof, process_noise_dof> processnoisecovariance;
 	typedef measurement measurementModel(state &, bool &);
@@ -243,7 +243,7 @@ public:
 		h_dyn_share = h_dyn_share_in;
 
 		maximum_iter = maximum_iteration;
-		for(int i=0; i<n; i++)//n = 23
+		for(int i=0; i<n; i++)//n = 23///这个维度是23
 		{
 			limit[i] = limit_vector[i];
 		}
@@ -384,8 +384,8 @@ public:
 		spMt xp = f_x_1 + f_x2 * dt;
 		P_ = xp * P_ * xp.transpose() + (f_w1 * dt) * Q * (f_w1 * dt).transpose();
 	#else
-		F_x1 += f_x_final * dt;
-		P_ = (F_x1) * P_ * (F_x1).transpose() + (dt * f_w_final) * Q * (dt * f_w_final).transpose();
+		F_x1 += f_x_final * dt;///就是Fx，公式（7）的左半部分
+		P_ = (F_x1) * P_ * (F_x1).transpose() + (dt * f_w_final) * Q * (dt * f_w_final).transpose();///误差状态量的协方差，公式（8），这个协方差矩阵有用，后面iekf的时候会用它
 	#endif
 	}
 
@@ -1642,15 +1642,15 @@ public:
 		{
 			dyn_share.valid = true;	
 			//构造优化函数并求解该函数的雅克比矩阵
-			h_dyn_share(x_, dyn_share);
+			h_dyn_share(x_, dyn_share);///求 观测残差对delt_x求导
 			//Matrix<scalar_type, Eigen::Dynamic, 1> h = h_dyn_share(x_, dyn_share);
 		#ifdef USE_sparse
 			spMt h_x_ = dyn_share.h_x.sparseView();
 		#else
-			Eigen::Matrix<scalar_type, Eigen::Dynamic, 12> h_x_ = dyn_share.h_x;
+			Eigen::Matrix<scalar_type, Eigen::Dynamic, 12> h_x_ = dyn_share.h_x;///就是公式（18）中的H矩阵
 		#endif	
 			double solve_start = omp_get_wtime();
-			dof_Measurement = h_x_.rows();
+			dof_Measurement = h_x_.rows();///行是激光点数，列是变量维度
 			vectorized_state dx;
 			x_.boxminus(dx, x_propagated);
 			dx_new = dx;
@@ -1820,7 +1820,7 @@ public:
 			//K_x = K_ * h_x_;
 			Matrix<scalar_type, n, 1> dx_ = K_h + (K_x - Matrix<scalar_type, n, n>::Identity()) * dx_new; 
 			state x_before = x_;
-			x_.boxplus(dx_);
+			x_.boxplus(dx_);///更新后验状态量
 			dyn_share.converge = true;
 			for(int i = 0; i < n ; i++)
 			{
@@ -1927,7 +1927,7 @@ public:
 				// }
 				// else
 				//{
-					P_ = L_ - K_x.template block<n, 12>(0, 0) * P_.template block<12, n>(0, 0);
+					P_ = L_ - K_x.template block<n, 12>(0, 0) * P_.template block<12, n>(0, 0);///后验方差
 				//}
 				solve_time += omp_get_wtime() - solve_start;
 				return;
@@ -1959,7 +1959,7 @@ public:
 		return P_;
 	}
 private:
-	state x_;
+	state x_;///状态量
 	measurement m_;
 	cov P_;
 	spMt l_;

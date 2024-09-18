@@ -281,7 +281,7 @@ void ImuProcess::UndistortPcl(const MeasureGroup &meas, esekfom::esekf<state_ikf
     Q.block<3, 3>(9, 9).diagonal() = cov_bias_acc;
     // IMU前向传播
     kf_state.predict(dt, Q, in);//sx: dt是前后两针imu时间差、Q是测量方差，in是测量的加速度和角速度
-
+    ///先前向递推更新以下imu的位姿，然后再后向递推
     /* save the poses at each IMU measurements */
     // 保存IMU预测过程的状态
     imu_state = kf_state.get_x();

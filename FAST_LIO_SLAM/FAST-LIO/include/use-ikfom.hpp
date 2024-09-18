@@ -18,19 +18,19 @@ MTK_BUILD_MANIFOLD(state_ikfom,//sx:这里应该会产生idx
 ((vect3, bg))
 ((vect3, ba))
 ((S2, grav))
-);//state_ikfom代表一个struct，成员变量为pos 。。。。。grav,用来定义x变量
+);//state_ikfom代表一个struct，///成员变量为pos 。。。。。grav,用来定义x变量
 
 MTK_BUILD_MANIFOLD(input_ikfom,
 ((vect3, acc))
 ((vect3, gyro))
-);//用来定义u变量
+);//用来定义u变量，///imu测量数据中的角速度，加速度
 
 MTK_BUILD_MANIFOLD(process_noise_ikfom,
 ((vect3, ng))
 ((vect3, na))
 ((vect3, nbg))
 ((vect3, nba))
-);//定义w变量
+);//定义w变量，///imu噪声变量，角速度噪声，加速度噪声，ba的导数，bg的导数
 
 MTK::get_cov<process_noise_ikfom>::type process_noise_cov()
 {
@@ -45,22 +45,21 @@ MTK::get_cov<process_noise_ikfom>::type process_noise_cov()
 //double L_offset_to_I[3] = {0.04165, 0.02326, -0.0284}; // Avia 
 //vect3 Lidar_offset_to_IMU(L_offset_to_I, 3);
 Eigen::Matrix<double, 24, 1> get_f(state_ikfom &s, const input_ikfom &in)
-{
-    //sx：注意，这里各变量在矩阵中的位置与论文不一样，公式2
+{///公式（3）， 假设噪声为0了？这里各变量在矩阵中的位置与论文不一样
 	Eigen::Matrix<double, 24, 1> res = Eigen::Matrix<double, 24, 1>::Zero();
 	vect3 omega;
 	in.gyro.boxminus(omega, s.bg);//sx:角速度
 	vect3 a_inertial = s.rot * (in.acc-s.ba); //去除bias后真实的，世界坐标系下加速度值，加速度
 	for(int i = 0; i < 3; i++ ){
 		res(i) = s.vel[i];//速度
-		res(i + 3) =  omega[i]; //角速度？
-		res(i + 12) = a_inertial[i] + s.grav[i]; 
+		res(i + 3) =  omega[i]; //角速度
+		res(i + 12) = a_inertial[i] + s.grav[i]; ///加速度
 	}
 	return res;
 }
 
 Eigen::Matrix<double, 24, 23> df_dx(state_ikfom &s, const input_ikfom &in)
-{
+{///计算公式（7）左部分
 	Eigen::Matrix<double, 24, 23> cov = Eigen::Matrix<double, 24, 23>::Zero();
 	cov.template block<3, 3>(0, 12) = Eigen::Matrix3d::Identity();
 	vect3 acc_;
@@ -80,7 +79,7 @@ Eigen::Matrix<double, 24, 23> df_dx(state_ikfom &s, const input_ikfom &in)
 
 
 Eigen::Matrix<double, 24, 12> df_dw(state_ikfom &s, const input_ikfom &in)
-{
+{///计算公式（7）右部分
 	Eigen::Matrix<double, 24, 12> cov = Eigen::Matrix<double, 24, 12>::Zero();
 	cov.template block<3, 3>(12, 3) = -s.rot.toRotationMatrix();
 	cov.template block<3, 3>(3, 0) = -Eigen::Matrix3d::Identity();

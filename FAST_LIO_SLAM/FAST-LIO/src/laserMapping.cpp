@@ -127,7 +127,7 @@ M3D Lidar_R_wrt_IMU(Eye3d);
 /*** EKF inputs and output ***/
 MeasureGroup Measures;
 esekfom::esekf<state_ikfom, 12, input_ikfom> kf;//实例化类模板
-//参数：状态量、噪声量位数、imu测量量（控制量）
+//参数：状态量、噪声量位数、imu测量量(角速度和加速度)
 //这里使用了类模板，state_ikfom是一个结构体类型，有一系列的成员变量，input_ikfm类似
 state_ikfom state_point;//sx:对应于x，状态量
 vect3 pos_lid;
@@ -648,7 +648,7 @@ void publish_path(const ros::Publisher pubPath)
 }
 
 void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_data)
-{
+{///传入状态量，返回H矩阵相关的
     double match_start = omp_get_wtime();
     laserCloudOri->clear();
     corr_normvect->clear();
@@ -726,7 +726,7 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
     double solve_start_  = omp_get_wtime();
 
     /*** Computation of Measuremnt Jacobian matrix H and measurents vector ***/
-    ekfom_data.h_x = MatrixXd::Zero(effct_feat_num, 12); //23，观测矩阵H
+    ekfom_data.h_x = MatrixXd::Zero(effct_feat_num, 12); ///effct_feat_num是有效的激光点数，这个12应该是，imu的外参R和T，以及imu和雷达之间的外参R和T
     ekfom_data.h.resize(effct_feat_num);
 
     //求观测值与误差的雅克比矩阵，如论文式14以及式12、13
@@ -820,7 +820,7 @@ int main(int argc, char** argv)
 
     double epsi[23] = {0.001};//sx:状态量6*3+外参量2*3
     fill(epsi, epsi+23, 0.001);//memset按照字节填充，fill按照单元赋值，字节已经处理好了
-    // 将函数地址传入kf对象中
+    /// 将函数地址传入kf对象中
     kf.init_dyn_share(get_f, df_dx, df_dw, h_share_model, NUM_MAX_ITERATIONS, epsi);
 
     /*** debug record ***/
@@ -840,7 +840,7 @@ int main(int argc, char** argv)
     /*** ROS subscribe initialization ***/
     ros::Subscriber sub_pcl = p_pre->lidar_type == AVIA ? \
         nh.subscribe(lid_topic, 200000, livox_pcl_cbk) : \
-        nh.subscribe(lid_topic, 200000, standard_pcl_cbk);
+        nh.subscribe(lid_topic, 200000, standard_pcl_cbk);///处理激光点云，可以提取特征点，或者直接进行一个降采样
 
     ros::Subscriber sub_imu = nh.subscribe(imu_topic, 200000, imu_cbk);
 
@@ -897,7 +897,7 @@ int main(int argc, char** argv)
             //include/IKFoM_toolkit/esekfom/esekfom.hpp中的predict()函数还没看
             // 获取kf预测的全局状态（imu）
             state_point = kf.get_x();
-            pos_lid = state_point.pos + state_point.rot * state_point.offset_T_L_I;//后面的变量是一个位置，雷达的全局坐标
+            pos_lid = state_point.pos + state_point.rot * state_point.offset_T_L_I;///全局坐标系是imu的，这里把雷达坐标系转换为世界坐标系下
             //feats_undistort是去完畸变的雷达点云
             if (feats_undistort->empty() || (feats_undistort == NULL))
             {
@@ -917,7 +917,7 @@ int main(int argc, char** argv)
             downSizeFilterSurf.setInputCloud(feats_undistort);//体素滤波
             downSizeFilterSurf.filter(*feats_down_body);
             t1 = omp_get_wtime();
-            feats_down_size = feats_down_body->points.size();
+            feats_down_size = feats_down_body->points.size();///当前一帧激光数据的
             /*** initialize the map kdtree ***/
             // 构建kd树
             if(ikdtree.Root_Node == nullptr)
